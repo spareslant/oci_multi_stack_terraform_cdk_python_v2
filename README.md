@@ -368,6 +368,50 @@ class RunStack(TerraformStack):
                    network.network_public_subnet)
 ```
 
+#### diff comparison to the previous version
+```diff
+$ diff -b -u oci_multi_stack_terraform_cdk_python/main.py oci_multi_stack_terraform_cdk_python_v2/main.py
+--- oci_multi_stack_terraform_cdk_python/main.py        2021-11-17 00:50:25.000000000 +0000
++++ oci_multi_stack_terraform_cdk_python_v2/main.py     2022-02-01 23:52:07.000000000 +0000
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python
+-from cdktf import App, DataTerraformRemoteStateLocal
++from cdktf import App
+ from constructs import Construct
+ from cdktf import TerraformStack
+
+@@ -18,27 +18,14 @@
+         priv_user = PrivilegedUser(self, "priv_user_compartment")
+         priv_user.message()
+
+-        def user_comp_remote_state(scope, id):
+-            state_file=f"{os.path.dirname(os.path.abspath(__file__))}/terraform.{priv_user.name()}.tfstate"
+-            return DataTerraformRemoteStateLocal(scope, id,
+-                path=state_file)
+-
+         if os.path.exists(f"{os.environ['HOME']}/.oci/config.cdk-user"):
+
+-            network = Network(app, "network",
+-                    priv_user.priv_compartment,
+-                    user_comp_remote_state)
+-
+-            def network_remote_state(scope, id):
+-                state_file=f"{os.path.dirname(os.path.abspath(__file__))}/terraform.{network.name()}.tfstate"
+-                return DataTerraformRemoteStateLocal(scope, id,
+-                    path=state_file)
++            network = Network(self, "network",
++                    priv_user.priv_compartment)
+
+             VmInstance(self, "vm_instance",
+                    priv_user.priv_compartment,
+-                   network.network_public_subnet,
+-                   user_comp_remote_state,
+-                   network_remote_state)
++                   network.network_public_subnet)
+```
+**Note:** new version need less code.
+
+
 ### In file `privUserAndCompartment.py`
 * `priv_user_compartment` stack is exposing `priv_compartment` using `TerraformOutput`
 
@@ -386,6 +430,32 @@ class PrivilegedUser(TerraformStack):
                 compartment_id=tenancyID)
         self.priv_compartment = comp
 ```
+
+#### diff comparison to the previous version
+```diff
+$ diff -b -u oci_multi_stack_terraform_cdk_python/privUserAndCompartment.py oci_multi_stack_terraform_cdk_python_v2/privUserAndCompartment.py
+--- oci_multi_stack_terraform_cdk_python/privUserAndCompartment.py      2021-11-17 00:38:33.000000000 +0000
++++ oci_multi_stack_terraform_cdk_python_v2/privUserAndCompartment.py   2022-02-01 23:28:04.000000000 +0000
+@@ -54,6 +54,8 @@
+                 description=f"{priv_compartment} compartment",
+                 enable_delete=True,
+                 compartment_id=tenancyID)
++        self.priv_compartment = comp
++
+         user = IdentityUser(self, f"{priv_user}",
+                 name=priv_user,
+                 description=f"{priv_user} user",
+@@ -77,7 +79,7 @@
+                 user_id=user.id,
+                 key_value=api_keys.public_key_pem)
+
+-        self.priv_compartment = TerraformOutput(self, f"{priv_compartment}_id",
++        TerraformOutput(self, f"{priv_compartment}_id",
+                 value=comp.id).friendly_unique_id
+
+         TerraformOutput(self, f"{priv_user}_id",
+```
+
 
 ### In file `network.py`
 * `network` stack is using exposed `priv_compartment` from `priv_user_compartment` stack.
@@ -411,6 +481,50 @@ class Network(TerraformStack):
         self.network_public_subnet = public_subnet
 ```
 
+#### diff comparison to the previous version
+```diff
+$ diff -b -u oci_multi_stack_terraform_cdk_python/network.py oci_multi_stack_terraform_cdk_python_v2/network.py
+--- oci_multi_stack_terraform_cdk_python/network.py     2021-11-28 18:37:53.000000000 +0000
++++ oci_multi_stack_terraform_cdk_python_v2/network.py  2022-02-01 23:28:05.000000000 +0000
+@@ -25,7 +25,7 @@
+
+     network_public_subnet = None
+
+-    def __init__(self, scope: Construct, ns: str, priv_compartment , remote_state):
++    def __init__(self, scope: Construct, ns: str, priv_compartment):
+         super().__init__(scope, ns)
+
+         (fingerprint,
+@@ -34,8 +34,7 @@
+             tenancy_ocid,
+             user_ocid) = user_creds(priv_user_profile_name, priv_user_oci_config_file)
+
+-        terraform_state = remote_state(self, ns)
+-        priv_compartment_id = terraform_state.get_string(priv_compartment)
++        priv_compartment_id = priv_compartment.id
+
+         # define resources here
+         OciProvider(self, "oci",
+@@ -66,6 +65,7 @@
+                 compartment_id=priv_compartment_id,
+                 display_name="public_subnet",
+                 dhcp_options_id=dhcp_options.id)
++        self.network_public_subnet = public_subnet
+
+         internet_gateway = CoreInternetGateway(self, f"{unique_id}_internet_gateway",
+                 compartment_id=priv_compartment_id,
+@@ -84,7 +84,7 @@
+                 subnet_id=public_subnet.id,
+                 route_table_id=route_table.id)
+
+-        self.network_public_subnet = TerraformOutput(self, f"{unique_id}_network_public_subnet",
++        TerraformOutput(self, f"{unique_id}_network_public_subnet",
+                 value=public_subnet.id).friendly_unique_id
+
+     def name(self):
+```
+
+
 ### In file `systemsAndApps.py`
 * `vm_instance` instance stack is using exposed `priv_compartment` from `priv_user_compartment` stack
 * `vm_instance` instance stack is using exposed `network_public_subnet` from `network` stack
@@ -430,6 +544,34 @@ class VmInstance(TerraformStack):
 
         priv_compartment_id = priv_compartment.id
         public_subnet_id = public_subnet.id
+```
+
+#### diff comparison to the previous version
+```diff
+$ diff -b -u oci_multi_stack_terraform_cdk_python/systemsAndApps.py oci_multi_stack_terraform_cdk_python_v2/systemsAndApps.py
+--- oci_multi_stack_terraform_cdk_python/systemsAndApps.py      2021-11-17 00:49:45.000000000 +0000
++++ oci_multi_stack_terraform_cdk_python_v2/systemsAndApps.py   2022-02-01 23:28:04.000000000 +0000
+@@ -22,9 +22,7 @@
+ class VmInstance(TerraformStack):
+     def __init__(self, scope: Construct, ns: str,
+             priv_compartment,
+-            public_subnet,
+-            user_comp_remote_state,
+-            network_remote_state):
++            public_subnet):
+         super().__init__(scope, ns)
+
+         (fingerprint,
+@@ -33,10 +31,8 @@
+             tenancy_ocid,
+             user_ocid) = user_creds(priv_user_profile_name, prv_user_oci_config_file)
+
+-        u_terraform_state = user_comp_remote_state(self, ns)
+-        n_terraform_state = network_remote_state(self, ns + "_network")
+-        priv_compartment_id = u_terraform_state.get_string(priv_compartment)
+-        public_subnet_id = n_terraform_state.get_string(public_subnet)
++        priv_compartment_id = priv_compartment.id
++        public_subnet_id = public_subnet.id
 ```
 
 ## Observations

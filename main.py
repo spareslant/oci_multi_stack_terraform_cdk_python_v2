@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from cdktf import App, DataTerraformRemoteStateLocal
+from cdktf import App
 from constructs import Construct
 from cdktf import TerraformStack
 
