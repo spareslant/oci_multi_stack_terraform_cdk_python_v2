@@ -5,7 +5,7 @@ draft: true
 ---
 
 # Introduction
-Terraform has releases a new version of `cdktf = 0.9.0`. This version makes cross referencing across stacks easy. This document will explore this feature. It is built upon previous version of code mentioned below.
+Terraform has released a new version of `cdktf = 0.9.0`. This version makes cross referencing across stacks easy. This document will explore this feature. It is built upon previous version of code mentioned below.
 
 * previous version of code
 ```bash
