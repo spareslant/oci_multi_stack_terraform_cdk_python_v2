@@ -7,7 +7,7 @@ priv_user = "cdk-user"
 priv_user_profile_name = priv_user
 priv_group = "cdk-group"
 
-tenancy_profile_name = "DEFAULT"
+tenancy_profile_name = "LONDON"
 oci_config_dir = f"{os.environ['HOME']}/.oci"
 tenancy_profile_config_file = f"{oci_config_dir}/config"
 group_policy_1 = f"Allow group {priv_group} to manage all-resources in compartment {priv_compartment}"
