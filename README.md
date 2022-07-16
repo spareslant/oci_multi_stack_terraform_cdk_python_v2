@@ -178,7 +178,7 @@ Paste the contents from file that you saved during the step `Configuration file 
 
 Contents of `~/.oci/config` will be similar to the following.
 ```ini
-[DEFAULT]
+[LONDON]
 user=ocid1.user.oc1..<a very long string>
 fingerprint=xx:yy:11:22:33:44:d4:56:b6:67:89:b7:b1:7f:4f:7a
 tenancy=ocid1.tenancy.oc1..<a very long string>
@@ -186,6 +186,8 @@ region=uk-london-1
 key_file=~/.oci/tenancyAdmin_private_api_key.pem
 ```
 Please note `key_file=` above.
+
+Note-2: I have changed the profile name from `DEFAULT` to `LONDON` in above oci config file. Profile name in above file must match with `tenancy_profile_name` in `common.py` file.
 
 
 ### Verify connectivity to OCI
